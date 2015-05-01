@@ -6,17 +6,11 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-#include "kthread.h"
 
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
-
-struct {
-  struct spinlock lock;
-  struct kthread threds[NTHREAD];
-} tTable;
 
 static struct proc *initproc;
 
@@ -29,8 +23,7 @@ static void wakeup1(void *chan);
 void
 pinit(void)
 {
-  initlock(&tTable.lock, "tTable");
-  initlock(&ptable.lock, "pTable");
+  initlock(&ptable.lock, "ptable");
 }
 
 //PAGEBREAK: 32
@@ -151,7 +144,7 @@ fork(void)
   }
   np->sz = proc->sz;
   np->parent = proc;
-  //*np->tf = *proc->tf;
+  *np->tf = *proc->tf;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;

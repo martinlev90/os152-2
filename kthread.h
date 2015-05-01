@@ -1,29 +1,6 @@
 #define MAX_STACK_SIZE 4000
 #define MAX_MUTEXES 64
 
-
-enum states { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
-
-
-
-
-struct thread {
-
-
-  char *kstack;                // Bottom of kernel stack for this thread
-  enum states state;        // Process state
-  int pid;                     // Process ID
-  struct proc *threadsProc;     // Parent process
-  struct trapframe *tf;        // Trap frame for current syscall
-  struct contextf*context;     // swtch() here to run process
-  void *chan;                  // If non-zero, sleeping on chan
-
-
-};
-
-
-
-
 /********************************
         The API of the KLT package
  ********************************/

@@ -1,6 +1,5 @@
 // Segments in proc->gdt.
 #define NSEGS     7
-#define NTHREAD	  16
 
 // Per-CPU state
 struct cpu {
@@ -29,7 +28,7 @@ extern int ncpu;
 // This is similar to how thread-local variables are implemented
 // in thread libraries such as Linux pthreads.
 extern struct cpu *cpu asm("%gs:0");       // &cpus[cpunum()]
-extern struct thread *kthread asm("%gs:4");     // cpus[cpunum()].proc
+extern struct proc *proc asm("%gs:4");     // cpus[cpunum()].proc
 
 //PAGEBREAK: 17
 // Saved registers for kernel context switches.
@@ -50,22 +49,19 @@ struct context {
   uint eip;
 };
 
-
-
+enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {
-
-//  char *kstack;                // Bottom of kernel stack for this process
-//  struct trapframe *tf;        // Trap frame for current syscall
-//  struct context *context;     // swtch() here to run process
-//  void *chan;                  // If non-zero, sleeping on chan
-
   uint sz;                     // Size of process memory (bytes)
   pde_t* pgdir;                // Page table
+  char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state
-  int pid;					   // Process ID
+  int pid;                     // Process ID
   struct proc *parent;         // Parent process
+  struct trapframe *tf;        // Trap frame for current syscall
+  struct context *context;     // swtch() here to run process
+  void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
