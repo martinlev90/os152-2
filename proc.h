@@ -1,5 +1,9 @@
 // Segments in proc->gdt.
 #define NSEGS     7
+#define NTHREAD   16
+
+#include "kthread.h"
+#include "spinlock.h"
 
 // Per-CPU state
 struct cpu {
@@ -14,6 +18,7 @@ struct cpu {
   // Cpu-local storage variables; see below
   struct cpu *cpu;
   struct proc *proc;           // The currently-running process.
+  struct kthread *thread;
 };
 
 extern struct cpu cpus[NCPU];
@@ -29,6 +34,7 @@ extern int ncpu;
 // in thread libraries such as Linux pthreads.
 extern struct cpu *cpu asm("%gs:0");       // &cpus[cpunum()]
 extern struct proc *proc asm("%gs:4");     // cpus[cpunum()].proc
+extern struct kthread *thread asm("%gs:8");     // cpus[cpunum()].thread
 
 //PAGEBREAK: 17
 // Saved registers for kernel context switches.
@@ -49,23 +55,36 @@ struct context {
   uint eip;
 };
 
-enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+struct ThreadTable{
+  struct spinlock lock;
+  struct kthread  threads[NTHREAD];
+};
+
+
 
 // Per-process state
 struct proc {
-  uint sz;                     // Size of process memory (bytes)
-  pde_t* pgdir;                // Page table
+
+/*
   char *kstack;                // Bottom of kernel stack for this process
-  enum procstate state;        // Process state
-  int pid;                     // Process ID
-  struct proc *parent;         // Parent process
   struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process
   void *chan;                  // If non-zero, sleeping on chan
+
+ */
+
+  uint sz;                     // Size of process memory (bytes)
+  pde_t* pgdir;                // Page table
+  enum state state;        	// Process state
+  int pid;                     // Process ID
+  struct proc *parent;         // Parent process
   int killed;                  // If non-zero, have been killed
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  char *kstack;                // Bottom of kernel stack for this process
+  struct ThreadTable threadTable;  // Process thread Table
+
 };
 
 // Process memory is laid out contiguously, low addresses first:

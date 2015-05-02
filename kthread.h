@@ -1,6 +1,28 @@
 #define MAX_STACK_SIZE 4000
 #define MAX_MUTEXES 64
 
+
+#include "types.h"
+
+enum state { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+
+
+
+struct kthread {
+
+  char *kstack;                // Bottom of kernel stack for this process
+  enum state state;        	   // Process state
+  int pid;                     // Process ID
+  struct proc *parent;         // Parent process
+  struct trapframe *tf;        // Trap frame for current syscall
+  struct context *context;     // swtch() here to run process
+  void *chan;                  // If non-zero, sleeping on chan
+  int killed;                  // If non-zero, have been killed
+  char name[16];               // Process name (debugging)
+  int kernelStack;			   // 1 if the stack is allocated by the stack 0 if not
+};
+
+
 /********************************
         The API of the KLT package
  ********************************/
@@ -15,3 +37,6 @@ int kthread_mutex_dealloc(int mutex_id);
 int kthread_mutex_lock(int mutex_id);
 int kthread_mutex_unlock(int mutex_id);
 int kthread_mutex_yieldlock(int mutex_id1, int mutex_id2);
+
+
+
