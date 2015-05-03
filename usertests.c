@@ -539,7 +539,7 @@ fourfiles(void)
         printf(1, "create failed\n");
         exit();
       }
-      
+
       memset(buf, '0'+pi, 512);
       for(i = 0; i < 12; i++){
         if((n = write(fd, buf, 500)) != 500){
@@ -558,6 +558,7 @@ fourfiles(void)
   for(i = 0; i < 2; i++){
     fname = names[i];
     fd = open(fname, 0);
+
     total = 0;
     while((n = read(fd, buf, sizeof(buf))) > 0){
       for(j = 0; j < n; j++){
@@ -569,6 +570,7 @@ fourfiles(void)
       total += n;
     }
     close(fd);
+
     if(total != 12*500){
       printf(1, "wrong length %d\n", total);
       exit();
@@ -1423,6 +1425,7 @@ sbrktest(void)
 
   // can one sbrk() less than a page?
   a = sbrk(0);
+
   int i;
   for(i = 0; i < 5000; i++){ 
     b = sbrk(1);

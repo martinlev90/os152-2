@@ -1819,7 +1819,7 @@ fourfiles(void)
         exit();
     10d2:	e8 de 2d 00 00       	call   3eb5 <exit>
       }
-      
+
       memset(buf, '0'+pi, 512);
     10d7:	8b 45 e8             	mov    -0x18(%ebp),%eax
     10da:	83 c0 30             	add    $0x30,%eax
@@ -1854,7 +1854,7 @@ fourfiles(void)
         printf(1, "create failed\n");
         exit();
       }
-      
+
       memset(buf, '0'+pi, 512);
       for(i = 0; i < 12; i++){
     1145:	83 45 f4 01          	addl   $0x1,-0xc(%ebp)
@@ -1912,6 +1912,7 @@ fourfiles(void)
     119b:	89 04 24             	mov    %eax,(%esp)
     119e:	e8 52 2d 00 00       	call   3ef5 <open>
     11a3:	89 45 dc             	mov    %eax,-0x24(%ebp)
+
     total = 0;
     11a6:	c7 45 ec 00 00 00 00 	movl   $0x0,-0x14(%ebp)
     while((n = read(fd, buf, sizeof(buf))) > 0){
@@ -1935,9 +1936,9 @@ fourfiles(void)
     11df:	e8 51 2e 00 00       	call   4035 <printf>
           exit();
     11e4:	e8 cc 2c 00 00       	call   3eb5 <exit>
-  for(i = 0; i < 2; i++){
     fname = names[i];
     fd = open(fname, 0);
+
     total = 0;
     while((n = read(fd, buf, sizeof(buf))) > 0){
       for(j = 0; j < n; j++){
@@ -1953,10 +1954,10 @@ fourfiles(void)
       total += n;
     11f5:	8b 45 d8             	mov    -0x28(%ebp),%eax
     11f8:	01 45 ec             	add    %eax,-0x14(%ebp)
-
   for(i = 0; i < 2; i++){
     fname = names[i];
     fd = open(fname, 0);
+
     total = 0;
     while((n = read(fd, buf, sizeof(buf))) > 0){
     11fb:	c7 44 24 08 00 20 00 	movl   $0x2000,0x8(%esp)
@@ -1978,6 +1979,7 @@ fourfiles(void)
     121f:	8b 45 dc             	mov    -0x24(%ebp),%eax
     1222:	89 04 24             	mov    %eax,(%esp)
     1225:	e8 b3 2c 00 00       	call   3edd <close>
+
     if(total != 12*500){
     122a:	81 7d ec 70 17 00 00 	cmpl   $0x1770,-0x14(%ebp)
     1231:	74 20                	je     1253 <fourfiles+0x239>
@@ -4977,6 +4979,7 @@ sbrktest(void)
     3115:	c7 04 24 00 00 00 00 	movl   $0x0,(%esp)
     311c:	e8 1c 0e 00 00       	call   3f3d <sbrk>
     3121:	89 45 f4             	mov    %eax,-0xc(%ebp)
+
   int i;
   for(i = 0; i < 5000; i++){ 
     3124:	c7 45 f0 00 00 00 00 	movl   $0x0,-0x10(%ebp)
@@ -5011,10 +5014,10 @@ sbrktest(void)
     3179:	8b 45 e8             	mov    -0x18(%ebp),%eax
     317c:	83 c0 01             	add    $0x1,%eax
     317f:	89 45 f4             	mov    %eax,-0xc(%ebp)
-  oldbrk = sbrk(0);
 
   // can one sbrk() less than a page?
   a = sbrk(0);
+
   int i;
   for(i = 0; i < 5000; i++){ 
     3182:	83 45 f0 01          	addl   $0x1,-0x10(%ebp)

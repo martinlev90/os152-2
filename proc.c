@@ -21,6 +21,16 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+int procIsReady(struct proc * p){
+
+	if(p->state == ZOMBIE || p->state == UNUSED || p->state == EMBRYO){
+		return 0;
+	}
+	return 1;
+
+}
+
+
 void
 pinit(void)
 {
@@ -83,6 +93,8 @@ found:
   t->context = (struct context*)sp;
   memset(t->context, 0, sizeof *t->context);
   t->context->eip = (uint)forkret;
+  t->kstack= p->kstack;
+  t->kernelStack=1;
 
   return p;
 }
@@ -115,7 +127,7 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
-
+  p->state = RUNNABLE;
   t->state = tRUNNABLE;
 }
 
@@ -125,18 +137,25 @@ int
 growproc(int n)
 {
   uint sz;
-  acquire( proc->lock);
+  //struct spinlock* lock =proc->lock;
+  //  acquire( lock);
   sz = proc->sz;
+  acquire(proc->lock);
   if(n > 0){
-    if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
+    if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0){
+      release(proc->lock);
       return -1;
+    }
   } else if(n < 0){
-    if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0)
-      return -1;
+    if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0){
+    	release(proc->lock);
+    	return -1;
+    }
   }
+  release(proc->lock);
   proc->sz = sz;
   switchuvm(proc);
-  release(proc->lock);
+//  release(lock);
   return 0;
 }
 
@@ -164,12 +183,21 @@ fork(void)
   np->parent = proc;
 
 
+  //np->threads[0]= *thread;
+  np->threads[0].parent= np;
+  *np->threads[0].tf = *thread->tf;
+//  np->threads[0].chan =thread->chan;
+//  *np->threads[0].context = thread->context;
+//  np->threads[0].kernelStack=  thread->kernelStack;
+//  np->threads[0].killed = thread->killed;
+//
+//  np->threads[0].tid = thread->tid;
 
-  for (i=0; i<NTHREAD; i++)
+  for (i=1; i<NTHREAD; i++)
   {
   	  np->threads[i].state=UNUSED;
   }
-  np->threads[0]= *thread;
+
 
   // Clear %eax so that fork returns 0 in the child.
   np->threads[0].tf->eax = 0;
@@ -185,9 +213,12 @@ fork(void)
 
   // lock to force the compiler to emit the np->state write last.
   acquire(&ptable.lock);
+  acquire(np->lock);
   np->state = RUNNABLE;
+  np->threads[0].state = tRUNNABLE;
+  release(np->lock);
   release(&ptable.lock);
-  
+
   return pid;
 }
 
@@ -203,13 +234,7 @@ exit(void)
   if(proc == initproc)
     panic("init exiting");
 
-  acquire(proc->lock);
 
-  for (tid=0; tid< NTHREAD; tid++){
-	  proc->threads[tid].state= tUNUSED;
-  }
-
-  release(proc->lock);
 
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
@@ -239,6 +264,15 @@ exit(void)
   }
 
  // Jump into the scheduler, never to return.
+  acquire(proc->lock);
+
+   for (tid=0; tid< NTHREAD; tid++){
+ 	  proc->threads[tid].state= tZOMBIE;
+   }
+
+
+   release(proc->lock);
+  thread->state= tZOMBIE;
   proc->state = ZOMBIE;
   sched();
   panic("zombie exit");
@@ -249,10 +283,12 @@ exit(void)
 int
 wait(void)
 {
+
   struct proc *p;
   int havekids, pid;
 
   acquire(&ptable.lock);
+
   for(;;){
     // Scan through table looking for zombie children.
     havekids = 0;
@@ -306,8 +342,12 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     	proc = p;
+    	if(! procIsReady(p))
+    		continue;
+
     	for (t=p->threads; t< &p->threads[NTHREAD]; t++ )
     	{
 		  if(t->state != tRUNNABLE)
@@ -319,7 +359,6 @@ scheduler(void)
 		  thread= t;
 		  switchuvm(p);
 		  t->state = tRUNNING;
-
 		  swtch(&cpu->scheduler, t->context);
 		  switchkvm();
 
@@ -359,11 +398,12 @@ sched(void)
 void
 yield(void)
 {
-  acquire(proc->lock);  //DOC: yieldlock
+
+  acquire(&ptable.lock);  //DOC: yieldlock
 
   thread->state = tRUNNABLE;
   sched();
-  release(proc->lock);
+  release(&ptable.lock);
 
 }
 
@@ -410,12 +450,15 @@ sleep(void *chan, struct spinlock *lk)
   }
 
   // Go to sleep.
-  proc->chan = chan;
-  proc->state = SLEEPING;
+  acquire(proc->lock);
+
+  thread->chan = chan;
+  thread->state = tSLEEPING;
+  release(proc->lock);
   sched();
 
   // Tidy up.
-  proc->chan = 0;
+  thread->chan = 0;
 
   // Reacquire original lock.
   if(lk != &ptable.lock){  //DOC: sleeplock2
@@ -430,11 +473,24 @@ sleep(void *chan, struct spinlock *lk)
 static void
 wakeup1(void *chan)
 {
+
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
-      p->state = RUNNABLE;
+  struct kthread *t;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+	  if (! procIsReady(p))
+		  	 continue;
+	  acquire( p->lock);
+
+	  for(t= p->threads; t < &p->threads[NTHREAD]; t++){
+
+		  if(t->state == tSLEEPING && t->chan == chan)
+			  t->state = tRUNNABLE;
+
+	  }
+	  release(p->lock);
+
+  }
 }
 
 // Wake up all processes sleeping on chan.
@@ -442,8 +498,11 @@ void
 wakeup(void *chan)
 {
   acquire(&ptable.lock);
+
   wakeup1(chan);
+
   release(&ptable.lock);
+
 }
 
 // Kill the process with the given pid.
@@ -504,8 +563,10 @@ procdump(void)
 		  getcallerpcs((uint*)t->context->ebp+2, pc);
 		  for(i=0; i<10 && pc[i] != 0; i++)
 			cprintf(" %p", pc[i]);
+
 		}
 		cprintf("\n");
   	  }
   }
 }
+
