@@ -331,6 +331,7 @@ pipe1(void)
     cc = 1;
     while((n = read(fds[0], buf, cc)) > 0){
       for(i = 0; i < n; i++){
+    	  printf(1,"%", buf);
         if((buf[i] & 0xff) != (seq++ & 0xff)){
           printf(1, "pipe1 oops 2\n");
           return;
@@ -372,23 +373,37 @@ preempt(void)
     for(;;)
       ;
 
-  pipe(pfds);
+  if( 0>pipe(pfds)){
+	  printf(1, "error pipe \n");
+  }
+
   pid3 = fork();
+	printf(1,"here pipe ***\%d %d \n",pid2, pid3);
+
   if(pid3 == 0){
     close(pfds[0]);
-    if(write(pfds[1], "x", 1) != 1)
+
+    int k=0;
+
+    if((k=write(pfds[1], "x", 1)) != 1)
       printf(1, "preempt write error");
+
+    printf(1,"*** %d", k);
     close(pfds[1]);
+
     for(;;)
       ;
   }
 
   close(pfds[1]);
+
   if(read(pfds[0], buf, sizeof(buf)) != 1){
     printf(1, "preempt read error");
     return;
   }
+  printf(1, "father \n");
   close(pfds[0]);
+
   printf(1, "kill... ");
   kill(pid1);
   kill(pid2);
@@ -1716,7 +1731,7 @@ main(int argc, char *argv[])
     exit();
   }
   close(open("usertests.ran", O_CREATE));
-
+/*
   createdelete();
   linkunlink();
   concreate();
@@ -1739,7 +1754,7 @@ main(int argc, char *argv[])
   exitiputtest();
   iputtest();
 
-  mem();
+  mem();*/
   pipe1();
   preempt();
   exitwait();

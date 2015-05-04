@@ -76,7 +76,7 @@ found:
   initlock( p->lock, "threadLock");
     for (i=0; i<NTHREAD; i++)
     {
-  	  p->threads[i].state=UNUSED;
+  	  p->threads[i].state=tUNUSED;
     }
 
   struct kthread* t= p->threads;
@@ -183,28 +183,27 @@ fork(void)
   np->parent = proc;
 
 
-  //np->threads[0]= *thread;
-  np->threads[0].parent= np;
-  *np->threads[0].tf = *thread->tf;
-//  np->threads[0].chan =thread->chan;
-//  *np->threads[0].context = thread->context;
-//  np->threads[0].kernelStack=  thread->kernelStack;
-//  np->threads[0].killed = thread->killed;
-//
-//  np->threads[0].tid = thread->tid;
-
   for (i=1; i<NTHREAD; i++)
   {
-  	  np->threads[i].state=UNUSED;
+	  np->threads[i].state=tUNUSED;
   }
+  np->threads[0].parent= np;
+  np->threads[0].kstack = thread->kstack;
+  *np->threads[0].tf = *thread->tf;
+  np->threads[0].kernelStack=  thread->kernelStack;
+
+
+
 
 
   // Clear %eax so that fork returns 0 in the child.
   np->threads[0].tf->eax = 0;
 
   for(i = 0; i < NOFILE; i++)
-    if(proc->ofile[i])
+    if(proc->ofile[i]){
       np->ofile[i] = filedup(proc->ofile[i]);
+
+    }
   np->cwd = idup(proc->cwd);
 
   safestrcpy(np->name, proc->name, sizeof(proc->name));
@@ -356,9 +355,12 @@ scheduler(void)
 		  // Switch to chosen process.  It is the process's job
 		  // to release ptable.lock and then reacquire it
 		  // before jumping back to us.
+
 		  thread= t;
 		  switchuvm(p);
 		  t->state = tRUNNING;
+
+		  // cprintf("pid: %d \n",proc->pid );
 		  swtch(&cpu->scheduler, t->context);
 		  switchkvm();
 
@@ -392,6 +394,7 @@ sched(void)
   intena = cpu->intena;
   swtch(&thread->context, cpu->scheduler);
   cpu->intena = intena;
+
 }
 
 // Give up the CPU for one scheduling round.
@@ -400,8 +403,9 @@ yield(void)
 {
 
   acquire(&ptable.lock);  //DOC: yieldlock
-
+  acquire(proc->lock);
   thread->state = tRUNNABLE;
+  release(proc->lock);
   sched();
   release(&ptable.lock);
 
@@ -518,8 +522,12 @@ kill(int pid)
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
-        p->state = RUNNABLE;
+      int i;
+      for (i=0; i<NTHREAD; i++){
+    	  p->killed =1;
+    	  if(p->threads[i].state == tSLEEPING)
+    		  	 p->threads[i].state = tRUNNABLE;
+      }
       release(&ptable.lock);
       return 0;
     }

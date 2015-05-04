@@ -82,7 +82,7 @@ pipewrite(struct pipe *p, char *addr, int n)
   acquire(&p->lock);
   for(i = 0; i < n; i++){
     while(p->nwrite == p->nread + PIPESIZE){  //DOC: pipewrite-full
-      if(p->readopen == 0 || proc->killed){
+        if(p->readopen == 0 || proc->killed){
         release(&p->lock);
         return -1;
       }
@@ -91,8 +91,10 @@ pipewrite(struct pipe *p, char *addr, int n)
     }
     p->data[p->nwrite++ % PIPESIZE] = addr[i];
   }
+
   wakeup(&p->nread);  //DOC: pipewrite-wakeup1
   release(&p->lock);
+
   return n;
 }
 
@@ -106,14 +108,17 @@ piperead(struct pipe *p, char *addr, int n)
     if(proc->killed){
       release(&p->lock);
       return -1;
-    }
+      }
     sleep(&p->nread, &p->lock); //DOC: piperead-sleep
   }
+
   for(i = 0; i < n; i++){  //DOC: piperead-copy
     if(p->nread == p->nwrite)
       break;
     addr[i] = p->data[p->nread++ % PIPESIZE];
+  //  cprintf("here pipe %d\n",i);
   }
+
   wakeup(&p->nwrite);  //DOC: piperead-wakeup
   release(&p->lock);
   return i;
