@@ -2,7 +2,8 @@
 #define NSEGS     7
 #define NTHREAD   16
 
-#include "kthread.h"
+
+void wakeup(void *chan);
 
 // Per-CPU state
 struct cpu {
@@ -54,14 +55,14 @@ struct context {
   uint eip;
 };
 
-enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+
 
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
   pde_t* pgdir;                // Page table
   char *kstack;                // Bottom of kernel stack for this process
-  enum procstate state;        // Process state
+  enum state state;        // Process state
   int pid;                     // Process ID
   struct proc *parent;         // Parent process
   //struct trapframe *tf;        // Trap frame for current syscall
@@ -72,7 +73,7 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  struct kthread threads[NTHREAD];
+  struct kthread* threads;
   struct spinlock* lock;
 };
 

@@ -1,19 +1,17 @@
 #define MAX_STACK_SIZE 4000
 #define MAX_MUTEXES 64
 
-enum threadstate { tUNUSED, tEMBRYO, tSLEEPING, tRUNNABLE, tRUNNING, tZOMBIE };
 
 struct kthread {
 
   char *kstack;                // Bottom of kernel stack for this process
-  enum threadstate state;      // thread state
+  enum state state;     	   // thread state
   int tid;                     // thread ID
   struct proc *parent;         // Parent process
   struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process
   void *chan;                  // If non-zero, sleeping on chan
-  int killed;                  // If non-zero, have been killed
-  char name[16];               // Process name (debugging)
+
   int kernelStack;			   // 1 if the stack is allocated by the stack 0 if not
 };
 

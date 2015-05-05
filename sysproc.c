@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "kthread.h"
 
 int
 sys_fork(void)
@@ -67,7 +68,7 @@ sys_sleep(void)
   acquire(&tickslock);
   ticks0 = ticks;
   while(ticks - ticks0 < n){
-    if(thread->killed){
+    if(proc->killed){
       release(&tickslock);
       return -1;
     }

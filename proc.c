@@ -6,10 +6,16 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "kthread.h"
+
+struct threadTable{
+  struct spinlock threadLock;
+  struct kthread threads[NTHREAD];
+};
 
 struct {
   struct spinlock lock;
-  struct spinlock threadLock[NPROC];
+  struct threadTable tTable[NPROC];
   struct proc proc[NPROC];
 } ptable;
 
@@ -60,7 +66,8 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
-  p->lock = &ptable.threadLock[i];
+  p->lock = &ptable.tTable[i].threadLock;
+  p->threads = ptable.tTable[i].threads;
   p->pid = nextpid++;
   release(&ptable.lock);
 
@@ -76,7 +83,7 @@ found:
   initlock( p->lock, "threadLock");
     for (i=0; i<NTHREAD; i++)
     {
-  	  p->threads[i].state=tUNUSED;
+  	  p->threads[i].state=UNUSED;
     }
 
   struct kthread* t= p->threads;
@@ -128,7 +135,7 @@ userinit(void)
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
   p->state = RUNNABLE;
-  t->state = tRUNNABLE;
+  t->state =  RUNNABLE;
 }
 
 // Grow current process's memory by n bytes.
@@ -185,7 +192,7 @@ fork(void)
 
   for (i=1; i<NTHREAD; i++)
   {
-	  np->threads[i].state=tUNUSED;
+	  np->threads[i].state=UNUSED;
   }
   np->threads[0].parent= np;
   np->threads[0].kstack = thread->kstack;
@@ -214,7 +221,7 @@ fork(void)
   acquire(&ptable.lock);
   acquire(np->lock);
   np->state = RUNNABLE;
-  np->threads[0].state = tRUNNABLE;
+  np->threads[0].state =  RUNNABLE;
   release(np->lock);
   release(&ptable.lock);
 
@@ -266,12 +273,12 @@ exit(void)
   acquire(proc->lock);
 
    for (tid=0; tid< NTHREAD; tid++){
- 	  proc->threads[tid].state= tZOMBIE;
+ 	  proc->threads[tid].state= ZOMBIE;
    }
 
 
    release(proc->lock);
-  thread->state= tZOMBIE;
+  thread->state= ZOMBIE;
   proc->state = ZOMBIE;
   sched();
   panic("zombie exit");
@@ -320,6 +327,7 @@ wait(void)
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(proc, &ptable.lock);  //DOC: wait-sleep
   }
+  return -1;
 }
 
 //PAGEBREAK: 42
@@ -349,7 +357,7 @@ scheduler(void)
 
     	for (t=p->threads; t< &p->threads[NTHREAD]; t++ )
     	{
-		  if(t->state != tRUNNABLE)
+		  if(t->state !=  RUNNABLE)
 			continue;
 
 		  // Switch to chosen process.  It is the process's job
@@ -358,7 +366,7 @@ scheduler(void)
 
 		  thread= t;
 		  switchuvm(p);
-		  t->state = tRUNNING;
+		  t->state = RUNNING;
 
 		  // cprintf("pid: %d \n",proc->pid );
 		  swtch(&cpu->scheduler, t->context);
@@ -387,7 +395,7 @@ sched(void)
     panic("sched ptable.lock");
   if(cpu->ncli != 1)
     panic("sched locks");
-  if(thread->state == tRUNNING)
+  if(thread->state == RUNNING)
     panic("sched running");
   if(readeflags()&FL_IF)
     panic("sched interruptible");
@@ -404,7 +412,7 @@ yield(void)
 
   acquire(&ptable.lock);  //DOC: yieldlock
   acquire(proc->lock);
-  thread->state = tRUNNABLE;
+  thread->state =  RUNNABLE;
   release(proc->lock);
   sched();
   release(&ptable.lock);
@@ -457,7 +465,7 @@ sleep(void *chan, struct spinlock *lk)
   acquire(proc->lock);
 
   thread->chan = chan;
-  thread->state = tSLEEPING;
+  thread->state = SLEEPING;
   release(proc->lock);
   sched();
 
@@ -488,8 +496,8 @@ wakeup1(void *chan)
 
 	  for(t= p->threads; t < &p->threads[NTHREAD]; t++){
 
-		  if(t->state == tSLEEPING && t->chan == chan)
-			  t->state = tRUNNABLE;
+		  if(t->state == SLEEPING && t->chan == chan)
+			  t->state =  RUNNABLE;
 
 	  }
 	  release(p->lock);
@@ -525,8 +533,8 @@ kill(int pid)
       int i;
       for (i=0; i<NTHREAD; i++){
     	  p->killed =1;
-    	  if(p->threads[i].state == tSLEEPING)
-    		  	 p->threads[i].state = tRUNNABLE;
+    	  if(p->threads[i].state == SLEEPING)
+    		  	 p->threads[i].state =  RUNNABLE;
       }
       release(&ptable.lock);
       return 0;
@@ -560,14 +568,14 @@ procdump(void)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
 	  for (t=p->threads; t< &p->threads[NTHREAD]; t++ )
 	  {
-		if(t->state == tUNUSED)
+		if(t->state == UNUSED)
 		  continue;
 		if(t->state >= 0 && t->state < NELEM(states) && states[p->state])
 		  state = states[t->state];
 		else
 		  state = "???";
 		cprintf("%d %s %s", p->pid, state, p->name);
-		if(t->state == tSLEEPING){
+		if(t->state == SLEEPING){
 		  getcallerpcs((uint*)t->context->ebp+2, pc);
 		  for(i=0; i<10 && pc[i] != 0; i++)
 			cprintf(" %p", pc[i]);
