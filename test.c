@@ -7,28 +7,39 @@
 #include "types.h"
 #include "user.h"
 
+#define MAX_STACK_SIZE 4000
+
+int i=0;
+
+void* testfunc();
 
 int main(){
 
-	if( !fork()){
-		printf (1,"fork1\n");
-		exit();
-	}
-	printf (1,"father 1\n");
-	if( !fork()){
-			printf (1,"fork2\n");
-			for(;;);
-	}
-	printf (1,"father 2\n");
-	if( !fork()){
-				printf (1,"fork3\n");
-				for(;;);
-		}
-	printf (1,"father 3\n");
-	if( !fork()){
-				printf (1,"fork4\n");
-				for(;;);
-		}
-	printf (1,"father 4\n");
-	exit();
+
+	void * stack0 = malloc(MAX_STACK_SIZE);
+
+	int tid= kthread_create( testfunc, stack0, MAX_STACK_SIZE);
+	kthread_join(tid);
+	//printf(1,"i: %d %d\n",i,tid);
+
+
+
+
+
+	kthread_exit();
+	return 0;
+}
+
+
+void* testfunc(){
+
+//	int k;
+//	for (k=0; k<10; k++){
+//		i++;
+//
+//	}
+	printf(1, "thread is alive");
+
+	kthread_exit();
+	return 0;
 }

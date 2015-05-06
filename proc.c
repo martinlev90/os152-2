@@ -29,10 +29,10 @@ static void wakeup1(void *chan);
 
 int procIsReady(struct proc * p){
 
-	if(p->state == ZOMBIE || p->state == UNUSED || p->state == EMBRYO){
-		return 0;
+	if(p->state == RUNNABLE  || p->state == RUNNING){
+		return 1;
 	}
-	return 1;
+	return 0;
 
 }
 
@@ -84,6 +84,7 @@ found:
     for (i=0; i<NTHREAD; i++)
     {
   	  p->threads[i].state=UNUSED;
+  	  p->threads[i].ptableLock=&ptable.lock;
     }
 
   struct kthread* t= p->threads;
@@ -102,7 +103,7 @@ found:
   t->context->eip = (uint)forkret;
   t->kstack= p->kstack;
   t->kernelStack=1;
-
+  t->ptableLock = &ptable.lock;
   return p;
 }
 
@@ -193,6 +194,7 @@ fork(void)
   for (i=1; i<NTHREAD; i++)
   {
 	  np->threads[i].state=UNUSED;
+	  np->threads[i].ptableLock=&ptable.lock;
   }
   np->threads[0].parent= np;
   np->threads[0].kstack = thread->kstack;
@@ -209,7 +211,6 @@ fork(void)
   for(i = 0; i < NOFILE; i++)
     if(proc->ofile[i]){
       np->ofile[i] = filedup(proc->ofile[i]);
-
     }
   np->cwd = idup(proc->cwd);
 
@@ -239,7 +240,6 @@ exit(void)
   int tid;
   if(proc == initproc)
     panic("init exiting");
-
 
 
   // Close all open files.
@@ -351,7 +351,7 @@ scheduler(void)
     acquire(&ptable.lock);
 
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    	proc = p;
+
     	if(! procIsReady(p))
     		continue;
 
@@ -365,6 +365,7 @@ scheduler(void)
 		  // before jumping back to us.
 
 		  thread= t;
+		  proc = p;
 		  switchuvm(p);
 		  t->state = RUNNING;
 
@@ -375,9 +376,10 @@ scheduler(void)
 		  // Process is done running for now.
 		  // It should have changed its p->state before coming back.
 		  thread =0;
+		  proc = 0;
 
     	}
-		proc = 0;
+
     }
     release(&ptable.lock);
 
@@ -444,6 +446,8 @@ forkret(void)
 void
 sleep(void *chan, struct spinlock *lk)
 {
+
+
   if(proc == 0)
     panic("sleep");
 
@@ -462,15 +466,20 @@ sleep(void *chan, struct spinlock *lk)
   }
 
   // Go to sleep.
+
+
   acquire(proc->lock);
 
   thread->chan = chan;
   thread->state = SLEEPING;
   release(proc->lock);
+
   sched();
 
   // Tidy up.
+  acquire(proc->lock);
   thread->chan = 0;
+  release(proc->lock);
 
   // Reacquire original lock.
   if(lk != &ptable.lock){  //DOC: sleeplock2
@@ -489,17 +498,24 @@ wakeup1(void *chan)
   struct proc *p;
 
   struct kthread *t;
+
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+
 	  if (! procIsReady(p))
 		  	 continue;
+
 	  acquire( p->lock);
 
 	  for(t= p->threads; t < &p->threads[NTHREAD]; t++){
 
-		  if(t->state == SLEEPING && t->chan == chan)
+		  if(t->state == SLEEPING && t->chan == chan){
 			  t->state =  RUNNABLE;
 
+			  }
+
+
 	  }
+
 	  release(p->lock);
 
   }

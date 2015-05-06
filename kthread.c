@@ -9,9 +9,34 @@
 #include "kthread.h"
 
 
+void
+wakeupThreads(void *chan)
+{
+
+
+
+  struct kthread *t;
+
+  acquire( proc->lock);
+
+  for(t= proc->threads; t < &proc->threads[NTHREAD]; t++){
+
+		  if(t->state == SLEEPING && t->chan == chan){
+			  t->state =  RUNNABLE;
+
+			  }
+   }
+
+  release(proc->lock);
+
+
+}
+
 
 int
 kthread_create(void*(*start_func)(), void* stack, uint stack_size){
+
+
 
 	int i, index,found;
 	struct kthread *t=0;
@@ -32,7 +57,7 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 
 	t->state =EMBRYO;
 
-	release(proc->lock);
+
 
 	sp = t->kstack + stack_size;
 
@@ -40,8 +65,8 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	sp -= sizeof *t->tf;
 	t->tf = (struct trapframe*)sp;
 
-	// Set up new context to start executing at forkret,
-	// which returns to trapret.
+	sp-=4;
+	*(uint*)sp = (uint)kthread_exit;
 
 	sp -= sizeof *t->context;
 	t->context = (struct context*)sp;
@@ -49,10 +74,11 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	t->context->eip = (uint)start_func;
 	t->kstack= stack;
 	t->kernelStack=0;
-	t-> tid= index;
+	t->tid = index;
+	t->parent =proc;
 	t->state =RUNNABLE;
-
-	return 1;
+	release(proc->lock);
+	return t->tid;
 }
 
 int kthread_id(){
@@ -65,27 +91,32 @@ void kthread_exit(){
 
 
 	 int tid;
-	 int found=0;
+	 int found=-1;
 
-
+	 if (! ( holding(thread->ptableLock) ))
+			 acquire(thread->ptableLock);
 	 acquire(proc->lock);
 
 	 thread->state= ZOMBIE;
+
 	 for (tid=0; tid< NTHREAD; tid++){
-	 	 if( proc->threads[tid].state!= ZOMBIE || proc->threads[tid].state!= UNUSED){
-	 		 found=1;
+	 	 if (!( proc->threads[tid].state== ZOMBIE || proc->threads[tid].state== UNUSED)){
+	 		 found=tid;
 	 		 break;
+
 	 	 }
 	 }
 
 	 release(proc->lock);
 
-	 if (!found){ // this was the last thread process needs to exit
-
+	 if (found<0){ // this was the last thread process needs to exit
+		 release(thread->ptableLock);
 		 exit();
 	 }
 
-	 wakeup(thread);
+	 wakeupThreads(thread);
+
+
 
 	 sched();
 	 panic("zombie exit");
@@ -98,6 +129,7 @@ int kthread_join(int thread_id){
 	  int found, tid;
 	  struct kthread *t;
 	  struct kthread *threadFound;
+
 	  acquire(proc->lock);
 
 	  for(;;){
@@ -105,10 +137,11 @@ int kthread_join(int thread_id){
 	    found = 0;
 	    for(t = proc->threads; t < &proc->threads[NTHREAD]; t++){
 
-	      if(t->tid != thread->tid)
+	      if(t->tid != thread_id)
 	        continue;
 	      found = 1;
 	      threadFound= t;
+
 	      if(t->state == ZOMBIE){
 	        // Found one.
 	        tid = t->tid;
@@ -127,7 +160,10 @@ int kthread_join(int thread_id){
 	    }
 
 	    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+
+
 	    sleep(threadFound, proc->lock);  //DOC: wait-sleep
+
 	  }
 	  return -1;
 }

@@ -179,5 +179,13 @@ void            switchkvm(void);
 int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
 
+// kthread.c
+
+
+int 			kthread_create(void*(*start_func)(), void* stack, uint stack_size);
+int 			kthread_id();
+void 			kthread_exit();
+int 			kthread_join(int thread_id);
+
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

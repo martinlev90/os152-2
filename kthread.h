@@ -12,6 +12,7 @@ struct kthread {
   struct context *context;     // swtch() here to run process
   void *chan;                  // If non-zero, sleeping on chan
 
+  struct spinlock* ptableLock;
   int kernelStack;			   // 1 if the stack is allocated by the stack 0 if not
 };
 
