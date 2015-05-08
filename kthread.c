@@ -56,10 +56,10 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	       t->state=EMBRYO;
 	       t->tid= nexttid++;
 	       release(proc->lock);
-//	       if((t->kstack = kalloc()) == 0){
-//	        t->state = UNUSED;
-//	        return -1;
-//	       }
+	       if((t->kstack = kalloc()) == 0){
+	        t->state = UNUSED;
+	        return -1;
+	       }
 	       sp = t->kstack + stack_size;//KSTACKSIZE;
 	       sp -= sizeof *t->tf;
 
@@ -74,7 +74,7 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	       t->context->eip = (uint)forkret;
 	       *t->tf=*thread->tf;
 	       t->tf->eip = (uint)start_func;
-	       t->tf->esp = (uint)sp;//(uint)stack+stack_size;
+	       t->tf->esp = (uint)stack+stack_size;
 	       t->parent = proc;
 	       t->state = RUNNABLE;
 	       return t->tid;
@@ -135,7 +135,7 @@ void kthread_exit(){
 	 int tid;
 	 int found=-1;
 
-	 acquire(thread->ptableLock);
+
 	 acquire(proc->lock);
 
 	 thread->state= ZOMBIE;
@@ -151,18 +151,19 @@ void kthread_exit(){
 	 release(proc->lock);
 
 	 if (found<0){ // this was the last thread process needs to exit
-		 release(thread->ptableLock);
+
 		 exit();
 	 }
 
 
 
 
-
+	 acquire(thread->ptableLock);
 	 wakeupThreads(thread);
 
 
 
+	/* thread->tf->eflags=0;*/
 	 sched();
 	 panic("zombie exit");
 }

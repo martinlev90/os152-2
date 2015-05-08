@@ -18,14 +18,15 @@ int main(){
 
 	void * stack0 = malloc(MAX_STACK_SIZE);
 
-	int tid= kthread_create( testfunc, stack0, MAX_STACK_SIZE);
+	int tid=
+	kthread_create( testfunc, stack0, MAX_STACK_SIZE);
 	kthread_join(tid);
 	//printf(1,"i: %d %d\n",i,tid);
 
 
 
 
-
+	//for(;;);
 	kthread_exit();
 	return 0;
 }
@@ -33,12 +34,13 @@ int main(){
 
 void* testfunc(){
 
-//	int k;
-//	for (k=0; k<10; k++){
-//		i++;
-//
-//	}
-	printf(1, "thread is alive\n");
+	int k;
+	for (k=0; k<10; k++){
+
+	printf(1, "thread is alive %d\n", ++i);
+	}
+
+
 
 	kthread_exit();
 	return 0;

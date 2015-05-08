@@ -8,6 +8,9 @@
 #include "spinlock.h"
 #include "kthread.h"
 
+
+
+
 struct threadTable{
   struct spinlock threadLock;
   struct kthread threads[NTHREAD];

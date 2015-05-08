@@ -20,7 +20,7 @@
 8010c5c0 panicked
 8010c5e0 cons
 801002f1 printint
-8010a004 digits.1526
+8010a004 digits.1528
 80100750 consputc
 8010a000 crt
 801005ca cgaputc
@@ -101,8 +101,8 @@
 8010c668 initproc
 80104341 allocproc
 80104ed6 wakeup1
-8010c008 first.1607
-8010c00c states.1641
+8010c008 first.1609
+8010c00c states.1643
 00000000 spinlock.c
 80105168 readeflags
 80105178 cli
@@ -227,7 +227,7 @@
 80107fdc setupkvm
 80105564 memcpy
 80108540 freevm
-80108a1f kthread_exit
+80108a45 kthread_exit
 80106f45 vector1
 80107606 vector178
 80107084 vector38
@@ -294,7 +294,7 @@
 80106f60 vector4
 801075a6 vector170
 8010c670 stack
-80108a11 kthread_id
+80108a37 kthread_id
 8010740e vector136
 80106f94 vector10
 80107756 vector206
@@ -452,7 +452,7 @@
 801070f0 vector50
 80106fb7 vector15
 801074c2 vector151
-80108b17 kthread_join
+80108b16 kthread_join
 80107219 vector83
 8010724f vector89
 80107246 vector88
