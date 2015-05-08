@@ -38,7 +38,7 @@ void* testfunc(){
 //		i++;
 //
 //	}
-	printf(1, "thread is alive");
+	printf(1, "thread is alive\n");
 
 	kthread_exit();
 	return 0;

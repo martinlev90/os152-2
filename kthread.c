@@ -9,6 +9,10 @@
 #include "kthread.h"
 
 
+int nexttid=1;
+extern void forkret(void);
+extern void trapret(void);
+
 void
 wakeupThreads(void *chan)
 {
@@ -23,7 +27,7 @@ wakeupThreads(void *chan)
 
 		  if(t->state == SLEEPING && t->chan == chan){
 			  t->state =  RUNNABLE;
-
+			  break;
 			  }
    }
 
@@ -36,8 +40,46 @@ wakeupThreads(void *chan)
 int
 kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 
+	  struct kthread *t;
+	  char *sp;
 
+	  acquire(proc->lock);
+	  for(t = proc->threads;t<&proc->threads[NTHREAD];t++){
+	    if(t->state == UNUSED){
+	       goto found;
+	    }
+	  }
+	  release(proc->lock);
+	  return -1;
 
+	  found:
+	       t->state=EMBRYO;
+	       t->tid= nexttid++;
+	       release(proc->lock);
+//	       if((t->kstack = kalloc()) == 0){
+//	        t->state = UNUSED;
+//	        return -1;
+//	       }
+	       sp = t->kstack + stack_size;//KSTACKSIZE;
+	       sp -= sizeof *t->tf;
+
+	       t->tf = (struct trapframe*)sp ;
+	       sp -= 4;
+	       *(uint*)sp = (uint)trapret;
+	       sp -= sizeof *t->context;
+	       t->context = (struct context*)sp;
+	       memset(t->context, 0, sizeof *t->context);
+	       //t->wait_time = 0;
+
+	       t->context->eip = (uint)forkret;
+	       *t->tf=*thread->tf;
+	       t->tf->eip = (uint)start_func;
+	       t->tf->esp = (uint)sp;//(uint)stack+stack_size;
+	       t->parent = proc;
+	       t->state = RUNNABLE;
+	       return t->tid;
+
+/*
 	int i, index,found;
 	struct kthread *t=0;
 	char *sp;
@@ -78,7 +120,7 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	t->parent =proc;
 	t->state =RUNNABLE;
 	release(proc->lock);
-	return t->tid;
+	return t->tid;*/
 }
 
 int kthread_id(){
@@ -93,8 +135,7 @@ void kthread_exit(){
 	 int tid;
 	 int found=-1;
 
-	 if (! ( holding(thread->ptableLock) ))
-			 acquire(thread->ptableLock);
+	 acquire(thread->ptableLock);
 	 acquire(proc->lock);
 
 	 thread->state= ZOMBIE;
@@ -113,6 +154,10 @@ void kthread_exit(){
 		 release(thread->ptableLock);
 		 exit();
 	 }
+
+
+
+
 
 	 wakeupThreads(thread);
 
@@ -153,13 +198,13 @@ int kthread_join(int thread_id){
 	      }
 	    }
 
-	    // No point waiting if we don't have any children.
+
 	    if(!found || proc->killed){
 	      release(proc->lock);
 	      return -1;
 	    }
 
-	    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+	    // Wait for thread to exit.
 
 
 	    sleep(threadFound, proc->lock);  //DOC: wait-sleep

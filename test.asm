@@ -59,7 +59,7 @@ void* testfunc(){
 //		i++;
 //
 //	}
-	printf(1, "thread is alive");
+	printf(1, "thread is alive\n");
   57:	c7 44 24 04 4b 08 00 	movl   $0x84b,0x4(%esp)
   5e:	00 
   5f:	c7 04 24 01 00 00 00 	movl   $0x1,(%esp)
@@ -853,7 +853,7 @@ printf(int fd, char *fmt, ...)
  571:	83 7d f4 00          	cmpl   $0x0,-0xc(%ebp)
  575:	75 09                	jne    580 <printf+0x101>
           s = "(null)";
- 577:	c7 45 f4 5b 08 00 00 	movl   $0x85b,-0xc(%ebp)
+ 577:	c7 45 f4 5c 08 00 00 	movl   $0x85c,-0xc(%ebp)
         while(*s != 0){
  57e:	eb 1e                	jmp    59e <printf+0x11f>
  580:	eb 1c                	jmp    59e <printf+0x11f>

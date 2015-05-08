@@ -1,0 +1,1 @@
+ ddd kernel -q -iex "set auto-load safe-path /home/yonatan/Desktop/os152-2/" 
