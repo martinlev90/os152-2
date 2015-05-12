@@ -27,7 +27,7 @@ wakeupThreads(void *chan)
 
 		  if(t->state == SLEEPING && t->chan == chan){
 			  t->state =  RUNNABLE;
-			  break;
+
 			  }
    }
 
@@ -74,7 +74,7 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	       t->context->eip = (uint)forkret;
 	       *t->tf=*thread->tf;
 	       t->tf->eip = (uint)start_func;
-	       t->tf->esp = (uint)stack+stack_size;
+	       t->tf->esp = (uint)(stack+stack_size);
 	       t->parent = proc;
 	       t->state = RUNNABLE;
 	       return t->tid;
@@ -150,7 +150,7 @@ void kthread_exit(){
 
 	 release(proc->lock);
 
-	 if (found<0){ // this was the last thread process needs to exit
+	 if (found<=0){ // this was the last thread process needs to exit
 
 		 exit();
 	 }
@@ -163,7 +163,7 @@ void kthread_exit(){
 
 
 
-	/* thread->tf->eflags=0;*/
+
 	 sched();
 	 panic("zombie exit");
 }
@@ -171,16 +171,17 @@ void kthread_exit(){
 int kthread_join(int thread_id){
 
 
-
+	//printf( "thread id : %d ", thread_id);
 	  int found, tid;
 	  struct kthread *t;
 	  struct kthread *threadFound;
 
-	  acquire(proc->lock);
+	  acquire(thread->ptableLock);
 
 	  for(;;){
 	    // Scan through table looking for zombie children.
 	    found = 0;
+		 acquire(proc->lock);
 	    for(t = proc->threads; t < &proc->threads[NTHREAD]; t++){
 
 	      if(t->tid != thread_id)
@@ -195,6 +196,7 @@ int kthread_join(int thread_id){
 	        t->tid = -1;
 	        t->parent = 0;
 	        release(proc->lock);
+	        release(thread->ptableLock);
 	        return tid;
 	      }
 	    }
@@ -202,16 +204,20 @@ int kthread_join(int thread_id){
 
 	    if(!found || proc->killed){
 	      release(proc->lock);
+	      release(thread->ptableLock);
 	      return -1;
 	    }
 
 	    // Wait for thread to exit.
 
+	    release(proc->lock);
 
-	    sleep(threadFound, proc->lock);  //DOC: wait-sleep
+
+	    sleep(threadFound, thread->ptableLock);  //DOC: wait-sleep
 
 	  }
-	  release(proc->lock);
+
+
 	  return -1;
 }
 /*

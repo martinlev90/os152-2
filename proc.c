@@ -406,6 +406,7 @@ sched(void)
     panic("sched interruptible");
   intena = cpu->intena;
   swtch(&thread->context, cpu->scheduler);
+
   cpu->intena = intena;
 
 }

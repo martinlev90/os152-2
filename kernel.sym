@@ -1,7 +1,7 @@
 80100000 .text
-80108c08 .rodata
-801092a2 .stab
-801092a3 .stabstr
+80108c50 .rodata
+801092ea .stab
+801092eb .stabstr
 8010a000 .data
 8010c5c0 .bss
 00000000 .debug_line
@@ -227,11 +227,11 @@
 80107fdc setupkvm
 80105564 memcpy
 80108540 freevm
-80108a45 kthread_exit
+80108a43 kthread_exit
 80106f45 vector1
 80107606 vector178
 80107084 vector38
-801088b9 kthread_create
+801088b7 kthread_create
 80102a49 kfree
 801078d6 vector238
 80101a0e iput
@@ -294,7 +294,7 @@
 80106f60 vector4
 801075a6 vector170
 8010c670 stack
-80108a37 kthread_id
+80108a35 kthread_id
 8010740e vector136
 80106f94 vector10
 80107756 vector206
@@ -452,7 +452,7 @@
 801070f0 vector50
 80106fb7 vector15
 801074c2 vector151
-80108b16 kthread_join
+80108b14 kthread_join
 80107219 vector83
 8010724f vector89
 80107246 vector88

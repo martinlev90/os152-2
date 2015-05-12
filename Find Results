@@ -1,0 +1,64 @@
+Searching 74 files for "swtch"
+
+/home/yonatan/Desktop/os152-2/defs.h:
+  120  void            yield(void);
+  121  
+  122: // swtch.S
+  123: void            swtch(struct context**, struct context*);
+  124  
+  125  // spinlock.c
+
+/home/yonatan/Desktop/os152-2/kthread.h:
+   10    struct proc *parent;         // Parent process
+   11    struct trapframe *tf;        // Trap frame for current syscall
+   12:   struct context *context;     // swtch() here to run process
+   13    void *chan;                  // If non-zero, sleeping on chan
+   14  
+
+/home/yonatan/Desktop/os152-2/proc.c:
+  339  // Scheduler never returns.  It loops, doing:
+  340  //  - choose a process to run
+  341: //  - swtch to start running that process
+  342  //  - eventually that process transfers control
+  343: //      via swtch back to the scheduler.
+  344  void
+  345  scheduler(void)
+  ...
+  374  
+  375  		  // cprintf("pid: %d \n",proc->pid );
+  376: 		  swtch(&cpu->scheduler, t->context);
+  377  		  switchkvm();
+  378  
+  ...
+  406      panic("sched interruptible");
+  407    intena = cpu->intena;
+  408:   swtch(&thread->context, cpu->scheduler);
+  409  
+  410    cpu->intena = intena;
+  ...
+  427  
+  428  // A fork child's very first scheduling by scheduler()
+  429: // will swtch here.  "Return" to user space.
+  430  void
+  431  forkret(void)
+
+/home/yonatan/Desktop/os152-2/proc.h:
+    9  struct cpu {
+   10    uchar id;                    // Local APIC ID; index into cpus[] below
+   11:   struct context *scheduler;   // swtch() here to enter scheduler
+   12    struct taskstate ts;         // Used by x86 to find stack for interrupt
+   13    struct segdesc gdt[NSEGS];   // x86 global descriptor table
+   ..
+   45  // Contexts are stored at the bottom of the stack they
+   46  // describe; the stack pointer is the address of the context.
+   47: // The layout of the context matches the layout of the stack in swtch.S
+   48  // at the "Switch stacks" comment. Switch doesn't save eip explicitly,
+   49  // but it is on the stack and allocproc() manipulates it.
+   ..
+   67    struct proc *parent;         // Parent process
+   68    //struct trapframe *tf;        // Trap frame for current syscall
+   69:   //struct context *context;     // swtch() here to run process
+   70    void *chan;                  // If non-zero, sleeping on chan
+   71    int killed;                  // If non-zero, have been killed
+
+11 matches across 4 files
