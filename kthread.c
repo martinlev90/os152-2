@@ -211,6 +211,7 @@ int kthread_join(int thread_id){
 	    sleep(threadFound, proc->lock);  //DOC: wait-sleep
 
 	  }
+	  release(proc->lock);
 	  return -1;
 }
 /*

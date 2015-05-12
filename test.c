@@ -18,9 +18,9 @@ int main(){
 
 	void * stack0 = malloc(MAX_STACK_SIZE);
 
-	int tid=
+	//int tid=
 	kthread_create( testfunc, stack0, MAX_STACK_SIZE);
-	kthread_join(tid);
+	//kthread_join(tid);
 	//printf(1,"i: %d %d\n",i,tid);
 
 

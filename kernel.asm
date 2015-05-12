@@ -18177,6 +18177,7 @@ int kthread_join(int thread_id){
 
 	  }
 80108bfe:	e9 2a ff ff ff       	jmp    80108b2d <kthread_join+0x17>
+	  release(proc->lock);
 	  return -1;
 }
 80108c03:	c9                   	leave  
