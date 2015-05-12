@@ -74,7 +74,7 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   struct kthread* threads;
-  struct spinlock* lock;
+  //struct spinlock* lock;
 };
 
 // Process memory is laid out contiguously, low addresses first:

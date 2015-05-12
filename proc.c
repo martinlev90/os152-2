@@ -12,7 +12,7 @@
 
 
 struct threadTable{
-  struct spinlock threadLock;
+  //struct spinlock threadLock;
   struct kthread threads[NTHREAD];
 };
 
@@ -69,7 +69,7 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
-  p->lock = &ptable.tTable[i].threadLock;
+  //p->lock = &ptable.tTable[i].threadLock;
   p->threads = ptable.tTable[i].threads;
   p->pid = nextpid++;
   release(&ptable.lock);
@@ -83,7 +83,7 @@ found:
   }
   sp = p->kstack + KSTACKSIZE;
   
-  initlock( p->lock, "threadLock");
+  //initlock( p->lock, "threadLock");
     for (i=0; i<NTHREAD; i++)
     {
   	  p->threads[i].state=UNUSED;
@@ -151,19 +151,19 @@ growproc(int n)
   //struct spinlock* lock =proc->lock;
   //  acquire( lock);
   sz = proc->sz;
-  acquire(proc->lock);
+  acquire(thread->ptableLock);
   if(n > 0){
     if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0){
-      release(proc->lock);
+      release(thread->ptableLock);
       return -1;
     }
   } else if(n < 0){
     if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0){
-    	release(proc->lock);
+    	release(thread->ptableLock);
     	return -1;
     }
   }
-  release(proc->lock);
+  release(thread->ptableLock);
   proc->sz = sz;
   switchuvm(proc);
 //  release(lock);
@@ -223,10 +223,10 @@ fork(void)
 
   // lock to force the compiler to emit the np->state write last.
   acquire(&ptable.lock);
-  acquire(np->lock);
+
   np->state = RUNNABLE;
   np->threads[0].state =  RUNNABLE;
-  release(np->lock);
+
   release(&ptable.lock);
 
   return pid;
@@ -273,14 +273,14 @@ exit(void)
   }
 
  // Jump into the scheduler, never to return.
-  acquire(proc->lock);
+
 
    for (tid=0; tid< NTHREAD; tid++){
  	  proc->threads[tid].state= ZOMBIE;
    }
 
 
-   release(proc->lock);
+
   thread->state= ZOMBIE;
   proc->state = ZOMBIE;
   sched();
@@ -417,9 +417,9 @@ yield(void)
 {
 
   acquire(&ptable.lock);  //DOC: yieldlock
-  acquire(proc->lock);
+
   thread->state =  RUNNABLE;
-  release(proc->lock);
+
   sched();
   release(&ptable.lock);
 
@@ -472,18 +472,18 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
 
 
-  acquire(proc->lock);
+
 
   thread->chan = chan;
   thread->state = SLEEPING;
-  release(proc->lock);
+
 
   sched();
 
   // Tidy up.
-  acquire(proc->lock);
+
   thread->chan = 0;
-  release(proc->lock);
+
 
   // Reacquire original lock.
   if(lk != &ptable.lock){  //DOC: sleeplock2
@@ -508,7 +508,7 @@ wakeup1(void *chan)
 	  if (! procIsReady(p))
 		  	 continue;
 
-	  acquire( p->lock);
+
 
 	  for(t= p->threads; t < &p->threads[NTHREAD]; t++){
 
@@ -520,7 +520,7 @@ wakeup1(void *chan)
 
 	  }
 
-	  release(p->lock);
+
 
   }
 }

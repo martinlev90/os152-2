@@ -21,7 +21,7 @@ wakeupThreads(void *chan)
 
   struct kthread *t;
 
-  acquire( proc->lock);
+  acquire( thread->ptableLock);
 
   for(t= proc->threads; t < &proc->threads[NTHREAD]; t++){
 
@@ -31,7 +31,7 @@ wakeupThreads(void *chan)
 			  }
    }
 
-  release(proc->lock);
+  release(thread->ptableLock);
 
 
 }
@@ -43,19 +43,19 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	  struct kthread *t;
 	  char *sp;
 
-	  acquire(proc->lock);
+	  acquire(thread->ptableLock);
 	  for(t = proc->threads;t<&proc->threads[NTHREAD];t++){
 	    if(t->state == UNUSED){
 	       goto found;
 	    }
 	  }
-	  release(proc->lock);
+	  release(thread->ptableLock);
 	  return -1;
 
 	  found:
 	       t->state=EMBRYO;
 	       t->tid= nexttid++;
-	       release(proc->lock);
+	       release(thread->ptableLock);
 	       if((t->kstack = kalloc()) == 0){
 	        t->state = UNUSED;
 	        return -1;
@@ -136,7 +136,7 @@ void kthread_exit(){
 	 int found=-1;
 
 
-	 acquire(proc->lock);
+	 acquire(thread->ptableLock);
 
 	 thread->state= ZOMBIE;
 
@@ -148,9 +148,9 @@ void kthread_exit(){
 	 	 }
 	 }
 
-	 release(proc->lock);
 
-	 if (found<=0){ // this was the last thread process needs to exit
+
+	 if (found<0){ // this was the last thread process needs to exit
 
 		 exit();
 	 }
@@ -158,7 +158,7 @@ void kthread_exit(){
 
 
 
-	 acquire(thread->ptableLock);
+
 	 wakeupThreads(thread);
 
 
@@ -181,7 +181,7 @@ int kthread_join(int thread_id){
 	  for(;;){
 	    // Scan through table looking for zombie children.
 	    found = 0;
-		 acquire(proc->lock);
+
 	    for(t = proc->threads; t < &proc->threads[NTHREAD]; t++){
 
 	      if(t->tid != thread_id)
@@ -195,7 +195,7 @@ int kthread_join(int thread_id){
 	        t->state = UNUSED;
 	        t->tid = -1;
 	        t->parent = 0;
-	        release(proc->lock);
+
 	        release(thread->ptableLock);
 	        return tid;
 	      }
@@ -203,14 +203,14 @@ int kthread_join(int thread_id){
 
 
 	    if(!found || proc->killed){
-	      release(proc->lock);
+
 	      release(thread->ptableLock);
 	      return -1;
 	    }
 
 	    // Wait for thread to exit.
 
-	    release(proc->lock);
+
 
 
 	    sleep(threadFound, thread->ptableLock);  //DOC: wait-sleep

@@ -1731,7 +1731,7 @@ main(int argc, char *argv[])
     exit();
   }
   close(open("usertests.ran", O_CREATE));
-/*
+
   createdelete();
   linkunlink();
   concreate();
@@ -1754,7 +1754,7 @@ main(int argc, char *argv[])
   exitiputtest();
   iputtest();
 
-  mem();*/
+  mem();
   pipe1();
   preempt();
   exitwait();
