@@ -18,11 +18,7 @@ wakeupThreads(void *chan)
 {
 
 
-
   struct kthread *t;
-
-  acquire( thread->ptableLock);
-
   for(t= proc->threads; t < &proc->threads[NTHREAD]; t++){
 
 		  if(t->state == SLEEPING && t->chan == chan){
@@ -30,8 +26,6 @@ wakeupThreads(void *chan)
 
 			  }
    }
-
-  release(thread->ptableLock);
 
 
 }
@@ -56,10 +50,10 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	       t->state=EMBRYO;
 	       t->tid= nexttid++;
 	       release(thread->ptableLock);
-	       if((t->kstack = kalloc()) == 0){
-	        t->state = UNUSED;
-	        return -1;
-	       }
+//	       if((t->kstack = kalloc()) == 0){
+//	        t->state = UNUSED;
+//	        return -1;
+//	       }
 	       sp = t->kstack + stack_size;//KSTACKSIZE;
 	       sp -= sizeof *t->tf;
 
@@ -75,52 +69,12 @@ kthread_create(void*(*start_func)(), void* stack, uint stack_size){
 	       *t->tf=*thread->tf;
 	       t->tf->eip = (uint)start_func;
 	       t->tf->esp = (uint)(stack+stack_size);
+	       t->tf->eflags = FL_IF;
 	       t->parent = proc;
 	       t->state = RUNNABLE;
 	       return t->tid;
 
-/*
-	int i, index,found;
-	struct kthread *t=0;
-	char *sp;
-	acquire(proc->lock);
-	for (i=0; i<=NTHREAD; i++){
-		if ( proc->threads[i].state==UNUSED){
-			found=1;
-			t= &proc->threads[i];
-			index=i;
-			break;
-		}
-	}
 
-	if (!found){
-		return -1;
-	}
-
-	t->state =EMBRYO;
-
-
-
-	sp = t->kstack + stack_size;
-
-	// Leave room for trap frame.
-	sp -= sizeof *t->tf;
-	t->tf = (struct trapframe*)sp;
-
-	sp-=4;
-	*(uint*)sp = (uint)kthread_exit;
-
-	sp -= sizeof *t->context;
-	t->context = (struct context*)sp;
-	memset(t->context, 0, sizeof *t->context);
-	t->context->eip = (uint)start_func;
-	t->kstack= stack;
-	t->kernelStack=0;
-	t->tid = index;
-	t->parent =proc;
-	t->state =RUNNABLE;
-	release(proc->lock);
-	return t->tid;*/
 }
 
 int kthread_id(){
@@ -139,30 +93,27 @@ void kthread_exit(){
 	 acquire(thread->ptableLock);
 
 	 thread->state= ZOMBIE;
-
 	 for (tid=0; tid< NTHREAD; tid++){
-	 	 if (!( proc->threads[tid].state== ZOMBIE || proc->threads[tid].state== UNUSED)){
+	 	 if (!( proc->threads[tid].state== ZOMBIE || proc->threads[tid].state== UNUSED) ){
 	 		 found=tid;
 	 		 break;
 
 	 	 }
 	 }
 
-
-
 	 if (found<0){ // this was the last thread process needs to exit
-
+		 proc->state = ZOMBIE;
+		 release(thread->ptableLock);
 		 exit();
 	 }
 
-
-
-
-
+	 thread->state= ZOMBIE;
+	 thread->kernelStack=0;
+	 thread->parent=0;
+	 thread->ptableLock=0;
+	 thread->tf=0;
+	 thread->tid=0;
 	 wakeupThreads(thread);
-
-
-
 
 	 sched();
 	 panic("zombie exit");
@@ -192,10 +143,10 @@ int kthread_join(int thread_id){
 	      if(t->state == ZOMBIE){
 	        // Found one.
 	        tid = t->tid;
-	        t->state = UNUSED;
+	        //t->state = ZOMBIE;
 	        t->tid = -1;
 	        t->parent = 0;
-
+	        printf("ffdsfsd");
 	        release(thread->ptableLock);
 	        return tid;
 	      }
@@ -209,9 +160,6 @@ int kthread_join(int thread_id){
 	    }
 
 	    // Wait for thread to exit.
-
-
-
 
 	    sleep(threadFound, thread->ptableLock);  //DOC: wait-sleep
 

@@ -3,7 +3,7 @@
 #define NTHREAD   16
 
 
-void sched(void);
+
 
 // Per-CPU state
 struct cpu {

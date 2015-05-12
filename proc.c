@@ -32,7 +32,7 @@ static void wakeup1(void *chan);
 
 int procIsReady(struct proc * p){
 
-	if(p->state == RUNNABLE  || p->state == RUNNING){
+	if(p->state == RUNNABLE  || p->state == RUNNING ){
 		return 1;
 	}
 	return 0;
@@ -148,8 +148,7 @@ int
 growproc(int n)
 {
   uint sz;
-  //struct spinlock* lock =proc->lock;
-  //  acquire( lock);
+ 
   sz = proc->sz;
   acquire(thread->ptableLock);
   if(n > 0){
@@ -265,10 +264,18 @@ exit(void)
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->parent == proc){
+    if(p->parent == proc ){
       p->parent = initproc;
-      if(p->state == ZOMBIE)
-        wakeup1(initproc);
+      	  int k=0,i;
+		  for (i=0; i<NTHREAD; i++)
+			{
+			  if ( !(p->threads[i].state==UNUSED || p->threads[i].state==ZOMBIE)){
+				  k++;
+
+			  }
+			}
+		 if (k==0)
+	       p->state = ZOMBIE;
     }
   }
 
@@ -277,12 +284,13 @@ exit(void)
 
    for (tid=0; tid< NTHREAD; tid++){
  	  proc->threads[tid].state= ZOMBIE;
+ 	  proc->threads[tid].tid=0;
+ 	  proc->threads[tid].parent=0;
+ 	  proc->threads[tid].chan=0;
    }
 
-
-
-  thread->state= ZOMBIE;
   proc->state = ZOMBIE;
+  proc->threads=0;
   sched();
   panic("zombie exit");
 }
@@ -357,7 +365,7 @@ scheduler(void)
 
     	if(! procIsReady(p))
     		continue;
-
+    	  proc = p;
     	for (t=p->threads; t< &p->threads[NTHREAD]; t++ )
     	{
 		  if(t->state !=  RUNNABLE)
@@ -368,21 +376,22 @@ scheduler(void)
 		  // before jumping back to us.
 
 		  thread= t;
-		  proc = p;
 		  switchuvm(p);
 		  t->state = RUNNING;
 
 		  // cprintf("pid: %d \n",proc->pid );
 		  swtch(&cpu->scheduler, t->context);
+
 		  switchkvm();
 
 		  // Process is done running for now.
 		  // It should have changed its p->state before coming back.
+
 		  thread =0;
-		  proc = 0;
+
 
     	}
-
+    	 proc = 0;
     }
     release(&ptable.lock);
 
@@ -470,9 +479,6 @@ sleep(void *chan, struct spinlock *lk)
   }
 
   // Go to sleep.
-
-
-
 
   thread->chan = chan;
   thread->state = SLEEPING;

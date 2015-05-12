@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "kthread.h"
 #include "elf.h"
 
 extern char data[];  // defined by kernel.ld

@@ -7,40 +7,34 @@
 #include "types.h"
 #include "user.h"
 
-#define MAX_STACK_SIZE 4000
+#define MAX_STACK_SIZE 4096
 
-int i=0;
+int i = 0;
 
 void* testfunc();
 
-int main(){
-
+int main() {
 
 	void * stack0 = malloc(MAX_STACK_SIZE);
 
-	int tid=
-	kthread_create( testfunc, stack0, MAX_STACK_SIZE);
+	int tid =
+			kthread_create(testfunc, stack0, MAX_STACK_SIZE);
+	printf(1, "i: %d %d\n", i, tid);
 	kthread_join(tid);
-	printf(1,"i: %d %d\n",i,tid);
+//	printf(1, "i: %d %d\n", i, tid);
 
-
-
-
-	for(;;);
 	kthread_exit();
+	//exit();
 	return 0;
 }
 
-
-void* testfunc(){
+void* testfunc() {
 
 	int k;
-	for (k=0; k<10; k++){
+	for (k = 0; k < 10; k++) {
 
-	printf(1, "thread is alive %d\n", ++i);
+		printf(1, "thread is alive %d\n", ++i);
 	}
-
-
 
 	kthread_exit();
 	return 0;

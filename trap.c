@@ -81,7 +81,7 @@ trap(struct trapframe *tf)
    
   //PAGEBREAK: 13
   default:
-    if(proc == 0 || (tf->cs&3) == 0){
+    if(thread == 0 || (tf->cs&3) == 0){
       // In kernel, it must be our mistake.
       cprintf("unexpected trap %d from cpu %d eip %x (cr2=0x%x)\n",
               tf->trapno, cpu->id, tf->eip, rcr2());
@@ -103,7 +103,7 @@ trap(struct trapframe *tf)
 
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
-  if(thread && thread->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
+  if(proc && thread->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
     yield();
 
   // Check if the process has been killed since we yielded

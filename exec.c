@@ -89,6 +89,22 @@ exec(char *path, char **argv)
 
   // Commit to the user image.
   oldpgdir = proc->pgdir;
+
+  struct kthread* t;
+  acquire(thread->ptableLock);
+  int k=0;
+  while (k==NTHREAD-1){
+	  k=0;
+  for (t= proc->threads; t< &proc->threads[NTHREAD]; t++){
+	  if (t != thread && (t->state==ZOMBIE && t->state==UNUSED) ){
+		  	  k++;
+	  }
+
+  }
+  }
+
+  release (thread->ptableLock);
+
   proc->pgdir = pgdir;
   proc->sz = sz;
   thread->tf->eip = elf.entry;  // main
